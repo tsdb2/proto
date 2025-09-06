@@ -1,0 +1,329 @@
+// This file provides the TSQL AST. The root of the AST is the `Statement`
+// message defined at the bottom.
+
+syntax = "proto2";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+import "./tsz.proto";
+
+package tsql;
+
+// A literal constant such as 42, 3.14, or "hello".
+message ConstantExpression {
+  oneof value {
+    bool bool_value = 1;
+    int64 int64_value = 2;
+    double double_value = 3;
+    string string_value = 4;
+  }
+}
+
+// The `VAL` token referring to the metric value.
+message ValueExpression {}
+
+// The `FIELDS` token referring to the field map (including both target fields and metric fields).
+message FieldMapExpression {}
+
+// A tuple of two or more sub-expressions.
+message TupleExpression {
+  repeated Expression component = 1;
+}
+
+message SubscriptExpression {
+  optional Expression operand = 1;
+  optional Expression index = 2;
+}
+
+// A value expression within a TSQL query.
+message Expression {
+  oneof value {
+    ConstantExpression constant_expression = 1;
+    ValueExpression value_expression = 2;
+    FieldMapExpression field_map_expression = 3;
+    TupleExpression tuple_expression = 4;
+    SubscriptExpression subscript_expression = 5;
+    // TODO
+  }
+}
+
+message SumReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+}
+
+message CountReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+}
+
+message ValueCountReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+}
+
+message MeanReducer {}
+
+message MinReducer {}
+
+message MaxReducer {}
+
+message RangeReducer {}
+
+message VarianceReducer {}
+
+message StdDevReducer {}
+
+message CovarianceReducer {}
+
+message SingletonReducer {}
+
+message MakeDistributionReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+  optional double width = 2;
+  optional double growth_factor = 3;
+  optional double scale_factor = 4;
+  optional uint32 num_finite_buckets = 5;
+}
+
+message ReducerFunction {
+  oneof reducer {
+    SumReducer sum_reducer = 1;
+    CountReducer count_reducer = 2;
+    ValueCountReducer value_count_reducer = 3;
+    MeanReducer mean_reducer = 4;
+    MinReducer min_reducer = 5;
+    MaxReducer max_reducer = 6;
+    RangeReducer range_reducer = 7;
+    VarianceReducer variance_reducer = 8;
+    StdDevReducer std_dev_reducer = 9;
+    CovarianceReducer covariance_reducer = 10;
+    SingletonReducer singleton_reducer = 11;
+    MakeDistributionReducer make_distribution_reducer = 12;
+    // TODO
+  }
+}
+
+message PickTopPointsNode {
+  optional uint64 num_to_keep = 1;
+  repeated string group_by_fields = 2;
+  optional bool invert_group_by = 3 [default = false];
+  optional bool reverse_sort = 4 [default = false];
+}
+
+message PickTopStreamsNode {
+  optional uint64 num_to_keep = 1;
+  repeated string group_by_fields = 2;
+  optional google.protobuf.Duration window = 3;
+  optional ReducerFunction reducer_function = 4;
+  optional google.protobuf.Duration time_offset = 5;
+  optional bool invert_group_by = 6 [default = false];
+  optional bool reverse_sort = 7 [default = false];
+}
+
+message JoinNode {
+  optional string left_name = 1;
+  optional string right_name = 2;
+  optional Expression left_default = 3;
+  optional Expression right_default = 4;
+  optional uint32 left_node_index = 5;
+  optional uint32 right_node_index = 6;
+}
+
+message TimeShiftNode {
+  optional uint32 input_node_index = 1;
+  optional google.protobuf.Duration shift_duration = 2;
+}
+
+message PointNode {
+  // TODO
+}
+
+message GroupByNode {
+  optional uint32 input_node_index = 1;
+  repeated string fields = 2;
+  optional ReducerFunction reducer = 3;
+  optional bool invert = 4 [default = false];
+}
+
+message WindowNode {
+  optional uint32 input_node_index = 1;
+
+  message Align {
+    optional google.protobuf.Duration max_interpolation_gap = 1;
+    optional bool linear = 2 [default = false];
+    optional google.protobuf.Duration max_extrapolation_gap = 3;
+  }
+
+  message NextYounger {
+    optional google.protobuf.Duration max_interpolation_gap = 1;
+    optional google.protobuf.Duration max_extrapolation_gap = 2;
+  }
+
+  message Rate {
+    optional google.protobuf.Duration time_delta = 1;
+    optional google.protobuf.Duration max_extrapolation_gap = 2;
+  }
+
+  message Delta {
+    optional google.protobuf.Duration time_delta = 1;
+    optional google.protobuf.Duration max_extrapolation_gap = 2;
+  }
+
+  message Reduce {
+    optional google.protobuf.Duration window = 1;
+    optional ReducerFunction reducer = 2;
+  }
+
+  oneof window_function {
+    Align align = 2;
+    NextYounger next_younger = 3;
+    Rate rate = 4;
+    Delta delta = 5;
+    Reduce reduce = 6;
+  }
+
+  // This field is required iff this is *not* the last `Window` stage of its branch in the query.
+  // The output period of the last `Window` stage must be specified in the outer `QueryStatement`
+  // message rather than here.
+  optional google.protobuf.Duration output_period = 7;
+}
+
+// Refers to the stream table of a raw metric.
+message RawStreamTable {
+  optional string target_schema = 1;
+  optional string metric_name = 2;
+}
+
+// Refers to the stream table of a precomputation.
+message PrecomputedStreamTable {
+  optional string group_id = 1;
+  optional string module_name = 2;
+  optional string precomputation_name = 3;
+  optional string parameter_name = 4;
+  optional StreamTable source_table = 5;
+}
+
+message StreamTable {
+  oneof stream_table {
+    RawStreamTable raw_stream_table = 1;
+    PrecomputedStreamTable precomputed_stream_table = 2;
+  }
+}
+
+// Expresses a constraint on a target or metric field.
+message FieldPredicate {
+  // When this flag is set the constraint is satisfied iff the field does NOT
+  // satisfy the predicate.
+  optional bool invert = 1 [default = false];
+
+  // Matches a field with any value, as long as there is a value. Unset fields do not match.
+  message AllMatch {}
+
+  // Matches a field whose value is compared with the given one.
+  message ValueMatch {
+    enum Op {
+      FIELD_PREDICATE_OP_EQ = 0;
+      FIELD_PREDICATE_OP_NE = 1;
+      FIELD_PREDICATE_OP_LT = 2;
+      FIELD_PREDICATE_OP_LE = 3;
+      FIELD_PREDICATE_OP_GT = 4;
+      FIELD_PREDICATE_OP_GE = 5;
+    }
+
+    // The comparison operation.
+    optional Op comparison = 1 [default = FIELD_PREDICATE_OP_EQ];
+
+    // The value to compare against.
+    optional tsz.FieldValue value = 2;
+  }
+
+  // The field is string-typed and must match the given regular expression
+  // pattern. The pattern is not anchored by default, so if a full match is
+  // required you need to surround it in ^ and $.
+  message RegexpMatch {
+    optional string pattern = 1;
+  }
+
+  // How to match the value of the field.
+  oneof constraint {
+    AllMatch all_match = 2;
+    ValueMatch value_match = 3;
+    RegexpMatch regexp_match = 4;
+  }
+}
+
+message FetchNode {
+  // The stream table to fetch.
+  optional StreamTable stream_table = 1;
+
+  // The keys in this map are field names and the values are the corresponding
+  // predicates. Both target fields and metric fields are allowed, with metric
+  // field names being prefixed by `metric:`.
+  map<string, FieldPredicate> field_predicates = 2;
+}
+
+// A node made up of two or more sub-nodes.
+//
+// For example, in the following expression:
+//
+//   (
+//    Fetch(Raw('FooSchema', '/foo/numerator')),
+//    Fetch(Raw('FooSchema', '/foo/denominator')))
+//   | Window(Rate('1m'))
+//   | GroupBy([])
+//   | Join()
+//   | Point(Div())
+//
+// the first stage is a tuple node containing two `Fetch` nodes.
+message TupleNode {
+  repeated uint32 node_index = 1;
+}
+
+// A node of the abstract syntax tree.
+message Node {
+  oneof node {
+    TupleNode tuple_node = 1;
+    FetchNode fetch_node = 2;
+    WindowNode window_node = 3;
+    GroupByNode group_by_node = 4;
+    PointNode point_node = 5;
+    TimeShiftNode time_shift_node = 6;
+    JoinNode join_node = 7;
+    PickTopStreamsNode pick_top_streams_node = 8;
+    PickTopPointsNode pick_top_points_node = 9;
+    // TODO
+  }
+}
+
+// Queries a TSQL expression.
+message QueryStatement {
+  // node[0] is the root of the expression. Other nodes are referred to by their indexes in this
+  // array.
+  //
+  // Note that nodes refer to their input(s), so the root node[0] is actually the *last* node of the
+  // expression, not the first. For example, in the following expression:
+  //
+  //   Fetch(Raw(...))
+  //   | Window(Align('1m'))
+  //   | Point(VAL * 2)
+  //   | GroupBy(['foo', 'bar'])
+  //
+  // the root is the `GroupBy` node, not the `Fetch` node.
+  repeated Node node = 1;
+
+  // If `time` is provided a single point interpolated at that timestamp will be returned for each
+  // output stream, while if `interval` is provided all points in that time range will be returned.
+  oneof time_or_interval {
+    google.protobuf.Timestamp time = 2;
+    google.protobuf.Duration interval = 3;
+  };
+
+  optional google.protobuf.Duration output_period = 4;
+}
+
+// A general TSQL statement. This is the root of the TSQL AST.
+message Statement {
+  oneof statement {
+    QueryStatement query = 1;
+    // TODO
+  };
+}

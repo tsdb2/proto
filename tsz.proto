@@ -1,0 +1,115 @@
+syntax = "proto2";
+
+package tsz;
+
+// Describes the definition of a tsz metric.
+message MetricDescriptor {
+  // Required.
+  optional string metric_name = 1;
+
+  // Optional: a human-readable description of the metric.
+  optional string description = 2;
+
+  enum ValueType {
+    METRIC_VALUE_TYPE_VOID = 0;
+    METRIC_VALUE_TYPE_BOOL = 1;
+    METRIC_VALUE_TYPE_INT64 = 2;
+    METRIC_VALUE_TYPE_DOUBLE = 3;
+    METRIC_VALUE_TYPE_STRING = 4;
+    METRIC_VALUE_TYPE_DISTRIBUTION = 5;
+  }
+
+  // The metric value type.
+  optional ValueType value_type = 3;
+
+  enum MetricType {
+    METRIC_TYPE_GAUGE = 0;
+    METRIC_TYPE_CUMULATIVE = 1;
+  }
+
+  // Indicates if the metric is cumulative or a gauge.
+  optional MetricType metric_type = 4;
+
+  // Bucketer for distribution metrics. Must be left empty if the `value_type` is not
+  // `METRIC_VALUE_TYPE_DISTRIBUTION`.
+  optional Bucketer distribution_bucketer = 5;
+
+  enum FieldType {
+    FIELD_TYPE_IN64 = 0;
+    FIELD_TYPE_BOOL = 1;
+    FIELD_TYPE_STRING = 2;
+  }
+
+  map<string, FieldType> metric_fields = 6;
+}
+
+// Describes a bucketing strategy for distribution metrics.
+//
+// A Bucketer is uniquely identified by four parameters: `width`, `growth_factor`, `scale_factor`,
+// and `num_finite_buckets`.
+//
+// `num_finite_buckets` determines the number of finite buckets defined by the bucketer. The
+// exclusive upper bound of the i-th bucket is calculated as:
+//
+//   width * i + scale_factor * pow(growth_factor, i - 1)
+//
+// for any `growth_factor` != 0. If `growth_factor` is zero the upper bound is just `width * i`.
+//
+// Every bucketer implicitly defines two extra non-finite buckets: the underflow bucket and the
+// overflow bucket. The former collects all samples below the lower bound of the lowest finite
+// bucket, while the latter collects those above the upper bound of the highest finite bucket.
+message Bucketer {
+  optional double width = 1;
+  optional double growth_factor = 2;
+  optional double scale_factor = 3;
+  optional uint32 num_finite_buckets = 4;
+}
+
+// A histogram of samples represented as an array of buckets, each bucket being represented by the
+// number of samples that fell within it.
+//
+// The bucket boundaries are not specified in this message. They are defined by a `Bucketer` (see
+// above), which is associated to the metric definition. Serializing a bucketer with each
+// distribution point would be an excessive overhead and would potentially lead to inconsistencies.
+message Distribution {
+  // The number of samples in each bucket. This array must have at least two elements, one for the
+  // underflow bucket and one for the overflow bucket. Buckets are ordered from lowest to highest:
+  // the first element of the array is the underflow bucket, the second is the first finite bucket,
+  // and so on up to the last which is the overflow bucket.
+  repeated int64 bucket = 1;
+
+  // The sum of all sampled values.
+  optional double sum = 2;
+
+  // The mean of all sampled values, which we store separately for use with the provisional means
+  // algorithm. If we simply computed this as `sum / count` instead of using provisional means we
+  // might experience loss of significance when dealing with extreme sample values and the results
+  // might be wildly inaccurate.
+  optional double mean = 3;
+
+  // The sum of the squared deviations from the mean. We use this value to calculate the mean with
+  // the provisional means algorithm, as well as the variance and standard deviation.
+  optional double ssd = 4;
+}
+
+// A tsz metric value.
+message Value {
+  oneof value {
+    bool bool_value = 1;
+    int64 int64_value = 2;
+    double double_value = 3;
+    string string_value = 4;
+    Distribution distribution_value = 5;
+  }
+}
+
+// A field value.
+//
+// We use this definition for metric fields, target fields, and even entity labels.
+message FieldValue {
+  oneof value {
+    bool bool_value = 1;
+    int64 int64_value = 2;
+    string string_value = 3;
+  }
+}

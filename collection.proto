@@ -1,0 +1,164 @@
+syntax = "proto2";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+import "./tsz.proto";
+
+package tsdb2;
+
+// Defines one or more tsz metrics.
+//
+// TODO: document the additive behavior.
+message DefineMetricsRequest {
+  repeated tsz.MetricDescriptor metric_descriptor = 1;
+}
+
+message DefineMetricsResponse {}
+
+// Carries metric data for WriteEntity and WriteTarget requests.
+//
+// This message is for a single metric (with zero or more streams and one or more points in each
+// stream).
+message MetricData {
+  // Provides data for a single stream of the metric.
+  message PointSet {
+    // Metric fields of this stream.
+    map<string, tsz.FieldValue> metric_fields = 1;
+
+    // A single, timestamped point in a stream.
+    message Point {
+      optional tsz.Value value = 1;
+      optional google.protobuf.Timestamp timestamp = 2;
+    }
+
+    // Points for the stream. We allow writing more than one point in each stream so the clients can
+    // perform batched writes and greatly increase efficiency.
+    repeated Point point = 2;
+  }
+
+  repeated PointSet point_set = 1;
+
+  // The replication level required for this data, as per the applicable retention policies. The
+  // client can retrieve this information using the `ReadSchedules` RPC. This field is ignored in
+  // `WriteEntity` requests; only `WriteTarget` uses it.
+  optional uint32 replication_level = 2;
+}
+
+// Requests writing data for a single entity (with one or more metrics).
+//
+// This is easier to use than `WriteTargetRequest` but also more expensive because it triggers
+// recipe resolution at every request.
+message WriteEntityRequest {
+  map<string, tsz.FieldValue> entity_labels = 1;
+  map<string, MetricData> metric_data = 2;
+}
+
+message WriteEntityResponse {}
+
+// Identifies a monitoring target uniquely.
+message TargetKey {
+  optional string target_schema = 1;
+  map<string, tsz.FieldValue> target_fields = 2;
+}
+
+// Resolves all targets matching the specified entity and returns the metric schedule information
+// for each target.
+//
+// This RPC is used in conjunction with `WriteTarget`.
+message ReadSchedulesRequest {
+  // The labels uniquely identifying the entity.
+  map<string, tsz.FieldValue> entity_labels = 1;
+
+  message Fingerprint {
+    optional TargetKey target_key = 1;
+    optional int64 schedules_fingerprint = 2;
+  }
+
+  // Fingerprints of the last known schedule information for all known targets matching the entity.
+  // The server will not re-send schedule data for fingerprints showing up here (see
+  // `ReadSchedulesResponse.TargetInfo` for details).
+  repeated Fingerprint last_known_fingerprints = 2;
+}
+
+// Returns the targets matching the entity specified in the request along with their sampling
+// schedule information. This information is derived from the applicable retention policies.
+message ReadSchedulesResponse {
+  // Provides metric schedule information for a single target.
+  message TargetInfo {
+    optional TargetKey target_key = 1;
+
+    // Sampling schedule information for a set of metrics stored in the target.
+    message MetricSchedules {
+      // Fingerprint of the schedules for this target. This is an unseeded hash of the
+      // `MetricSchedules` message including the inclusion/exclusion patterns, the sampling period,
+      // the traffic class, and the replication level.
+      //
+      // If this fingerprint was present among the ones provided in the `ReadSchedulesRequest` then
+      // the server can safely assume the client already has this information, so all other fields
+      // in this message are left empty.
+      optional int64 fingerprint = 1;
+
+      // Metric names matching these patterns are included in the schedules, but not if they also
+      // match `exclusion_patterns`.
+      repeated string inclusion_patterns = 2;
+
+      // Metric names matching these patterns are excluded from the schedules.
+      repeated string exclusion_patterns = 3;
+
+      // Sampling period for the metrics.
+      optional google.protobuf.Duration sampling_period = 4;
+
+      // Traffic class that must be used to write the metrics with `WriteTargetRequest`.
+      optional uint32 traffic_class = 5;
+
+      // Replication level for the metrics (must be specified in `WriteTargetRequest`).
+      optional uint32 replication_level = 6;
+    }
+
+    // All applicable schedules for the target.
+    //
+    // NOTE: the server will include `MetricSchedules` whose fingerprint is already known to the
+    // client, except that all other fields will be empty for those. There are three possible cases
+    // when processing this array on the client side:
+    //
+    //  * if a fingerprint is known to the client but not found here, the client must remove the
+    //    corresponding schedule and disable the relative sampling;
+    //  * if a fingerprint is found here but not known to the client, the corresponding
+    //    `MetricSchedules` element will have meaningful information and the client must parse it
+    //    and start the corresponding sampling;
+    //  * if a fingerprint is known to the client and also found here, the corresponding
+    //    `MetricSchedules` element will have empty fields and can be ignored (the client is already
+    //    sampling based on that schedule).
+    repeated MetricSchedules metric_schedules = 2;
+  }
+
+  repeated TargetInfo target_info = 1;
+
+  // Time to wait before running another `ReadScheduleRequest` for the same
+  // entity.
+  optional google.protobuf.Duration next_request_delay = 2;
+}
+
+// Writes data for a single target.
+//
+// Using `ReadSchedules`+`WriteTarget` is much more efficient than using `WriteEntity` because
+// recipe resolution is performed once by `ReadSchedules` and the resulting target keys are cached
+// in the client. It also gives the client more control over the generated traffic shape because
+// target fanout happens in the client rather than in the ingestion path.
+message WriteTargetRequest {
+  optional TargetKey target_key = 1;
+  repeated MetricData metric_data = 2;
+}
+
+message WriteTargetResponse {}
+
+service TszCollection {
+  rpc DefineMetrics(DefineMetricsRequest) returns (DefineMetricsResponse);
+
+  rpc WriteEntity(WriteEntityRequest) returns (WriteEntityResponse);
+
+  rpc ReadSchedules(ReadSchedulesRequest) returns (ReadSchedulesResponse);
+
+  rpc WriteTarget(WriteTargetRequest) returns (WriteTargetResponse);
+}
