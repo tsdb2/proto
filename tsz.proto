@@ -1,49 +1,6 @@
 syntax = "proto2";
 
-import "google/protobuf/timestamp.proto";
-
 package tsz;
-
-// Describes the definition of a tsz metric.
-message MetricDescriptor {
-  // Required.
-  optional string metric_name = 1;
-
-  // Optional: a human-readable description of the metric.
-  optional string description = 2;
-
-  enum ValueType {
-    METRIC_VALUE_TYPE_VOID = 0;
-    METRIC_VALUE_TYPE_BOOL = 1;
-    METRIC_VALUE_TYPE_INT64 = 2;
-    METRIC_VALUE_TYPE_DOUBLE = 3;
-    METRIC_VALUE_TYPE_STRING = 4;
-    METRIC_VALUE_TYPE_DISTRIBUTION = 5;
-  }
-
-  // The metric value type.
-  optional ValueType value_type = 3;
-
-  enum MetricType {
-    METRIC_TYPE_GAUGE = 0;
-    METRIC_TYPE_CUMULATIVE = 1;
-  }
-
-  // Indicates if the metric is cumulative or a gauge.
-  optional MetricType metric_type = 4;
-
-  // Bucketer for distribution metrics. Must be left empty if the `value_type` is not
-  // `METRIC_VALUE_TYPE_DISTRIBUTION`.
-  optional Bucketer distribution_bucketer = 5;
-
-  enum FieldType {
-    FIELD_TYPE_IN64 = 0;
-    FIELD_TYPE_BOOL = 1;
-    FIELD_TYPE_STRING = 2;
-  }
-
-  map<string, FieldType> metric_fields = 6;
-}
 
 // Describes a bucketing strategy for distribution metrics.
 //
@@ -115,3 +72,53 @@ message FieldValue {
     string string_value = 3;
   }
 }
+
+// Describes the definition of a tsz metric.
+message MetricDescriptor {
+  // Required.
+  optional string metric_name = 1;
+
+  // Optional: a human-readable description of the metric.
+  optional string description = 2;
+
+  enum ValueType {
+    METRIC_VALUE_TYPE_VOID = 0;
+    METRIC_VALUE_TYPE_BOOL = 1;
+    METRIC_VALUE_TYPE_INT64 = 2;
+    METRIC_VALUE_TYPE_DOUBLE = 3;
+    METRIC_VALUE_TYPE_STRING = 4;
+    METRIC_VALUE_TYPE_DISTRIBUTION = 5;
+  }
+
+  // The metric value type.
+  optional ValueType value_type = 3;
+
+  enum MetricType {
+    METRIC_TYPE_GAUGE = 0;
+    METRIC_TYPE_CUMULATIVE = 1;
+  }
+
+  // Indicates if the metric is cumulative or a gauge.
+  optional MetricType metric_type = 4;
+
+  // Bucketer for distribution metrics. Must be left empty if the `value_type` is not
+  // `METRIC_VALUE_TYPE_DISTRIBUTION`.
+  optional Bucketer distribution_bucketer = 5;
+
+  enum FieldType {
+    FIELD_TYPE_IN64 = 0;
+    FIELD_TYPE_BOOL = 1;
+    FIELD_TYPE_STRING = 2;
+  }
+
+  map<string, FieldType> metric_fields = 6;
+}
+
+// Defines one or more tsz metrics.
+//
+// TODO: document the additive behavior.
+message DefineMetricsRequest {
+  repeated tsz.MetricDescriptor metric_descriptor = 1;
+}
+
+message DefineMetricsResponse {}

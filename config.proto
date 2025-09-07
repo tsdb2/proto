@@ -7,15 +7,6 @@ import "tsz.proto";
 
 package tsdb2;
 
-// Defines one or more tsz metrics.
-//
-// TODO: document the additive behavior.
-message DefineMetricsRequest {
-  repeated tsz.MetricDescriptor metric_descriptor = 1;
-}
-
-message DefineMetricsResponse {}
-
 // Defines one or more tsz metrics, forcing incompatible changes.
 //
 // TODO: document the overriding behavior.
@@ -120,7 +111,7 @@ message DeleteModuleRequest {
 message DeleteModuleResponse {}
 
 service ConfigService {
-  rpc DefineMetrics(DefineMetricsRequest) returns (DefineMetricsResponse);
+  rpc DefineMetrics(tsz.DefineMetricsRequest) returns (tsz.DefineMetricsResponse);
 
   rpc ForceDefineMetrics(ForceDefineMetricsRequest) returns (ForceDefineMetricsResponse);
 

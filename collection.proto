@@ -7,15 +7,6 @@ import "tsz.proto";
 
 package tsdb2;
 
-// Defines one or more tsz metrics.
-//
-// TODO: document the additive behavior.
-message DefineMetricsRequest {
-  repeated tsz.MetricDescriptor metric_descriptor = 1;
-}
-
-message DefineMetricsResponse {}
-
 // Carries metric data for WriteEntity and WriteTarget requests.
 //
 // This message is for a single metric (with zero or more streams and one or more points in each
@@ -155,7 +146,7 @@ message WriteTargetRequest {
 message WriteTargetResponse {}
 
 service TszCollection {
-  rpc DefineMetrics(DefineMetricsRequest) returns (DefineMetricsResponse);
+  rpc DefineMetrics(tsz.DefineMetricsRequest) returns (tsz.DefineMetricsResponse);
 
   rpc WriteEntity(WriteEntityRequest) returns (WriteEntityResponse);
 
