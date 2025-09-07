@@ -2,8 +2,8 @@ syntax = "proto2";
 
 import "google/protobuf/duration.proto";
 
-import "./tsql.proto";
-import "./tsz.proto";
+import "tsql.proto";
+import "tsz.proto";
 
 package tsdb2;
 

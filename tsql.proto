@@ -6,7 +6,7 @@ syntax = "proto2";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
-import "./tsz.proto";
+import "tsz.proto";
 
 package tsql;
 
