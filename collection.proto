@@ -29,7 +29,8 @@ message MetricData {
     // A single, timestamped point in a stream.
     message Point {
       optional tsz.Value value = 1;
-      optional google.protobuf.Timestamp timestamp = 2;
+      optional google.protobuf.Timestamp start_timestamp = 2;
+      optional google.protobuf.Timestamp end_timestamp = 3;
     }
 
     // Points for the stream. We allow writing more than one point in each stream so the clients can

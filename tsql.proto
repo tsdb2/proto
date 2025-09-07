@@ -31,10 +31,202 @@ message TupleExpression {
   repeated Expression component = 1;
 }
 
+// A named tuple of two or more sub-expressions.
+message NamedTupleExpression {
+  message NamedComponent {
+    optional string name = 1;
+    optional Expression expression = 2;
+  }
+  repeated NamedComponent component = 1;
+}
+
 message SubscriptExpression {
   optional Expression operand = 1;
   optional Expression index = 2;
 }
+
+message NegExpression {
+  optional Expression operand = 1;
+}
+
+message AddExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message SubExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message MulExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message DivExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message IntDivExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message ModExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message PowExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message CeilExpression {
+  optional Expression operand = 1;
+}
+
+message FloorExpression {
+  optional Expression operand = 1;
+}
+
+message RoundExpression {
+  optional Expression operand = 1;
+}
+
+message AbsExpression {
+  optional Expression operand = 1;
+}
+
+message SqrtExpression {
+  optional Expression operand = 1;
+}
+
+message LogExpression {
+  optional Expression operand = 1;
+}
+
+message ExponentialExpression {
+  optional Expression operand = 1;
+}
+
+message AndExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message OrExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message NotExpression {
+  optional Expression operand = 1;
+}
+
+message XorExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message OrElseExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message HasValueExpression {
+  optional Expression operand = 1;
+}
+
+message CondExpression {
+  optional Expression condition = 1;
+  optional Expression then_branch = 2;
+  optional Expression else_branch = 3;
+}
+
+message LtExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message GtExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message EqExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message NeExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message LeExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message GeExpression {
+  optional Expression lhs = 1;
+  optional Expression rhs = 2;
+}
+
+message ConcatExpression {
+  repeated Expression operand = 1;
+}
+
+message RegexpMatchesValueExpression {
+  optional Expression pattern = 1;
+  optional Expression operand = 2;
+  optional Expression full_match = 3;
+}
+
+message RegexpReplaceValueExpression {
+  optional Expression pattern = 1;
+  optional Expression rewrite = 2;
+  optional Expression operand = 3;
+  optional Expression global = 4;
+}
+
+message RegexpExtractTupleExpression {
+  optional Expression pattern = 1;
+  optional Expression operand = 2;
+  optional Expression full_match = 3;
+}
+
+message RegexpExtractValueExpression {
+  optional Expression pattern = 1;
+  optional Expression rewrite = 2;
+  optional Expression operand = 3;
+  optional Expression default_value = 4;
+}
+
+message AsciiToUpperExpression {
+  optional Expression operand = 1;
+}
+
+message AsciiToLowerExpression {
+  optional Expression operand = 1;
+}
+
+message StringLengthExpression {
+  optional Expression operand = 1;
+}
+
+message TimestampMicrosExpression {}
+
+message ResetTimestampMicrosExpression {}
+
+message NextOlderValueExpression {}
+
+message NextOlderTimestampMicrosExpression {}
+
+message NextOlderResetTimestampMicrosExpression {}
 
 // A value expression within a TSQL query.
 message Expression {
@@ -43,7 +235,49 @@ message Expression {
     ValueExpression value_expression = 2;
     FieldMapExpression field_map_expression = 3;
     TupleExpression tuple_expression = 4;
-    SubscriptExpression subscript_expression = 5;
+    NamedTupleExpression named_tuple_expression = 5;
+    SubscriptExpression subscript_expression = 6;
+    NegExpression neg_expression = 7;
+    AddExpression add_expression = 8;
+    SubExpression sub_expression = 9;
+    MulExpression mul_expression = 10;
+    DivExpression div_expression = 11;
+    IntDivExpression int_div_expression = 12;
+    ModExpression mod_expression = 13;
+    PowExpression pow_expression = 14;
+    CeilExpression ceil_expression = 15;
+    FloorExpression floor_expression = 16;
+    RoundExpression round_expression = 17;
+    AbsExpression abs_expression = 18;
+    SqrtExpression sqrt_expression = 19;
+    LogExpression log_expression = 20;
+    ExponentialExpression exponential_expression = 21;
+    AndExpression and_expression = 22;
+    OrExpression or_expression = 23;
+    NotExpression not_expression = 24;
+    XorExpression xor_expression = 25;
+    OrElseExpression or_else_expression = 26;
+    HasValueExpression has_value_expression = 27;
+    CondExpression cond_expression = 28;
+    LtExpression lt_expression = 29;
+    GtExpression gt_expression = 30;
+    EqExpression eq_expression = 31;
+    NeExpression ne_expression = 32;
+    LeExpression le_expression = 33;
+    GeExpression ge_expression = 34;
+    ConcatExpression concat_expression = 35;
+    RegexpMatchesValueExpression regexp_matches_value_expression = 36;
+    RegexpReplaceValueExpression regexp_replace_value_expression = 37;
+    RegexpExtractTupleExpression regexp_extract_tuple_expression = 38;
+    RegexpExtractValueExpression regexp_extract_value_expression = 39;
+    AsciiToUpperExpression ascii_to_upper_expression = 40;
+    AsciiToLowerExpression ascii_to_lower_expression = 41;
+    StringLengthExpression string_length_expression = 42;
+    TimestampMicrosExpression timestamp_micros_expression = 43;
+    ResetTimestampMicrosExpression reset_timestamp_micros_expression = 44;
+    NextOlderValueExpression next_older_value_expression = 45;
+    NextOlderTimestampMicrosExpression next_older_timestamp_micros_expression = 46;
+    NextOlderResetTimestampMicrosExpression next_older_reset_timestamp_micros_expression = 47;
     // TODO
   }
 }
@@ -84,6 +318,37 @@ message MakeDistributionReducer {
   optional uint32 num_finite_buckets = 5;
 }
 
+message MakeWeightedDistributionReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+  optional double width = 2;
+  optional double growth_factor = 3;
+  optional double scale_factor = 4;
+  optional uint32 num_finite_buckets = 5;
+}
+
+message FractionTrueReducer {}
+
+message CountTrueReducer {
+  optional bool output_on_empty_input = 1 [default = false];
+}
+
+message PickAnyReducer {}
+
+message PickByMaxReducer {
+  optional string field_name = 1;
+}
+
+message MinMeanMaxReducer {}
+
+message ElementwiseReducer {
+  message Component {
+    optional string input_name = 1;
+    optional string output_name = 2;
+    optional ReducerFunction reducer = 3;
+  }
+  repeated Component component = 1;
+}
+
 message ReducerFunction {
   oneof reducer {
     SumReducer sum_reducer = 1;
@@ -98,7 +363,13 @@ message ReducerFunction {
     CovarianceReducer covariance_reducer = 10;
     SingletonReducer singleton_reducer = 11;
     MakeDistributionReducer make_distribution_reducer = 12;
-    // TODO
+    MakeWeightedDistributionReducer make_weighted_distribution_reducer = 13;
+    FractionTrueReducer fraction_true_reducer = 14;
+    CountTrueReducer count_true_reducer = 15;
+    PickAnyReducer pick_any_reducer = 16;
+    PickByMaxReducer pick_by_max_reducer = 17;
+    MinMeanMaxReducer min_mean_max_reducer = 18;
+    ElementwiseReducer elementwise_reducer = 19;
   }
 }
 
@@ -134,7 +405,8 @@ message TimeShiftNode {
 }
 
 message PointNode {
-  // TODO
+  optional uint32 input_node_index = 1;
+  optional Expression expression = 2;
 }
 
 message GroupByNode {
@@ -198,14 +470,18 @@ message PrecomputedStreamTable {
   optional string group_id = 1;
   optional string module_name = 2;
   optional string precomputation_name = 3;
-  optional string parameter_name = 4;
-  optional StreamTable source_table = 5;
+  map<string, StreamTable> precomputation_parameters = 4;
+}
+
+message AbstractStreamTable {
+  optional string parameter_name = 1;
 }
 
 message StreamTable {
   oneof stream_table {
     RawStreamTable raw_stream_table = 1;
     PrecomputedStreamTable precomputed_stream_table = 2;
+    AbstractStreamTable abstract_stream_table = 3;
   }
 }
 

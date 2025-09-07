@@ -1,0 +1,41 @@
+syntax = "proto2";
+
+import "google/protobuf/timestamp.proto";
+
+import "./tsql.proto";
+import "./tsz.proto";
+
+package tsdb2;
+
+// Runs the give TSQL query.
+message QueryRequest {
+  optional tsql.Statement statement = 1;
+}
+
+// Returns a chunk of tsz data.
+//
+// It's possible that some of the returned points were already returned in a previous chunk with
+// different values or reset timestamps, in which case the new data must override the old.
+message QueryResponse {
+  message Point {
+    optional tsz.Value value = 1;
+    optional google.protobuf.Timestamp timestamp = 2;
+    optional google.protobuf.Timestamp reset_timestamp = 3;
+  }
+
+  message Stream {
+    map<string, tsz.FieldValue> metric_field = 1;
+    repeated Point point = 2;
+  }
+
+  message TargetData {
+    map<string, tsz.FieldValue> target_field = 1;
+    repeated Stream stream = 2;
+  }
+
+  repeated TargetData data = 1;
+}
+
+service QueryService {
+  rpc Query(QueryRequest) returns (stream QueryResponse);
+}

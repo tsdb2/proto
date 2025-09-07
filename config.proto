@@ -61,8 +61,7 @@ message RetentionPolicy {
 
   message PrecomputationSpec {
     optional string precomputation_name = 1;
-    optional string parameter_name = 2;
-    optional SourceSpec source_table = 3;
+    map<string, SourceSpec> precomputation_parameters = 2;
   }
 
   message SourceSpec {
@@ -83,10 +82,15 @@ message ModuleDescriptor {
   optional string group_name = 1;
   optional string module_name = 2;
 
+  // Target schemas defined by this module.
   repeated TargetSchema target_schema = 3;
 
+  // Standing queries defined by this module. Standing queries are TSQL expressions that are used in
+  // precomputations. They may have abstract source stream table parameters, which are bound in the
+  // retention policies for the precomputations using these expressions.
   repeated StandingQuery standing_query = 4;
 
+  // Retention policies defined by this module, both for raw metrics and precomputations.
   repeated RetentionPolicy retention_policy = 5;
 
   // TODO: consoles
