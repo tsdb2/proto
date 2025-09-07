@@ -38,6 +38,36 @@ message TargetSchema {
   repeated FieldDefinition field = 2;
 }
 
+message TargetRecipe {
+  optional string recipe_name = 1;
+
+  // Name of the schema for the targets synthesized by this recipe.
+  optional string target_schema = 2;
+
+  // Constraints applied to entity labels.
+  optional tsql.FieldPredicates entity_label_predicates = 3;
+
+  message TargetField {
+    oneof value {
+      // The target field will always be set to this constant value.
+      tsz.FieldValue constant_value = 1;
+
+      // The target field will be set to the value of this entity label, causing an error at
+      // collection time if the entity label isn't of the same type as the target field.
+      string entity_label_name = 2;
+    }
+  }
+
+  // Keys in this map are target field names and values are `TargetField` objects describing how to
+  // set a particular field.
+  //
+  // Target fields not appearing in this map will be left unset in the resulting targets.
+  //
+  // Target fields appearing in this map that are not defined in the schema are an error and will
+  // cause the recipe to be rejected.
+  map<string, TargetField> target_fields = 4;
+}
+
 // Describes a precomputed query.
 message StandingQuery {
   optional string name = 1;
@@ -76,13 +106,16 @@ message ModuleDescriptor {
   // Target schemas defined by this module.
   repeated TargetSchema target_schema = 3;
 
+  // Target recipes defined by this module.
+  repeated TargetRecipe target_recipe = 4;
+
   // Standing queries defined by this module. Standing queries are TSQL expressions that are used in
   // precomputations. They may have abstract source stream table parameters, which are bound in the
   // retention policies for the precomputations using these expressions.
-  repeated StandingQuery standing_query = 4;
+  repeated StandingQuery standing_query = 5;
 
   // Retention policies defined by this module, both for raw metrics and precomputations.
-  repeated RetentionPolicy retention_policy = 5;
+  repeated RetentionPolicy retention_policy = 6;
 
   // TODO: consoles
   // TODO: alerts

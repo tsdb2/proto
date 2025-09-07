@@ -373,21 +373,63 @@ message ReducerFunction {
   }
 }
 
+message FilterNode {
+  optional uint32 input_node_index = 1;
+  optional Expression operation = 2;
+}
+
+message UnionNode {
+  repeated uint32 input_node_index = 1;
+  optional ReducerFunction reducer_function = 2;
+}
+
+message MapStreamIdNode {
+  optional uint32 input_node_index = 1;
+  optional string out_target_schema_name = 2;
+  map<string, Expression> out_field_map = 3;
+  optional ReducerFunction reducer_function = 4;
+  optional bool drop_metric_fields = 5 [default = false];
+  optional bool drop_target_fields = 6 [default = false];
+}
+
 message PickTopPointsNode {
-  optional uint64 num_to_keep = 1;
-  repeated string group_by_fields = 2;
-  optional bool invert_group_by = 3 [default = false];
-  optional bool reverse_sort = 4 [default = false];
+  optional uint32 input_node_index = 1;
+  optional uint64 num_to_keep = 2;
+  repeated string group_by_fields = 3;
+  optional bool invert_group_by = 4 [default = false];
+  optional bool reverse_sort = 5 [default = false];
 }
 
 message PickTopStreamsNode {
-  optional uint64 num_to_keep = 1;
-  repeated string group_by_fields = 2;
+  optional uint32 input_node_index = 1;
+  optional uint64 num_to_keep = 2;
   optional google.protobuf.Duration window = 3;
-  optional ReducerFunction reducer_function = 4;
-  optional google.protobuf.Duration time_offset = 5;
-  optional bool invert_group_by = 6 [default = false];
-  optional bool reverse_sort = 7 [default = false];
+  repeated string group_by_fields = 4;
+  optional ReducerFunction reducer_function = 5;
+  optional Expression operation = 6;
+  optional google.protobuf.Duration time_offset = 7;
+  optional bool invert_group_by = 8 [default = false];
+  optional bool reverse_sort = 9 [default = false];
+}
+
+message JoinWithLiteralTableNode {
+  optional uint32 input_node_index = 1;
+
+  optional string target_schema_name = 2;
+  repeated string field_name = 3;
+
+  message TableEntry {
+    repeated Expression field_value = 1;
+    optional Expression value = 2;
+  }
+
+  repeated TableEntry table_entry = 4;
+
+  optional Expression input_default = 5;
+  optional Expression literal_default = 6;
+
+  optional Expression input_name = 7;
+  optional Expression literal_name = 8;
 }
 
 message JoinNode {
@@ -487,9 +529,11 @@ message StreamTable {
 
 // Expresses a constraint on a target or metric field.
 message FieldPredicate {
-  // When this flag is set the constraint is satisfied iff the field does NOT
-  // satisfy the predicate.
-  optional bool invert = 1 [default = false];
+  // Name of the field this predicate applies to.
+  optional string field_name = 1;
+
+  // When this flag is set the constraint is satisfied iff the field does NOT satisfy the predicate.
+  optional bool invert = 2 [default = false];
 
   // Matches a field with any value, as long as there is a value. Unset fields do not match.
   message AllMatch {}
@@ -512,29 +556,36 @@ message FieldPredicate {
     optional tsz.FieldValue value = 2;
   }
 
-  // The field is string-typed and must match the given regular expression
-  // pattern. The pattern is not anchored by default, so if a full match is
-  // required you need to surround it in ^ and $.
+  // The field is string-typed and must match the given regular expression pattern. The pattern is
+  // not anchored by default, so if a full match is required you need to surround it in ^ and $.
   message RegexpMatch {
     optional string pattern = 1;
   }
 
   // How to match the value of the field.
   oneof constraint {
-    AllMatch all_match = 2;
-    ValueMatch value_match = 3;
-    RegexpMatch regexp_match = 4;
+    AllMatch all_match = 3;
+    ValueMatch value_match = 4;
+    RegexpMatch regexp_match = 5;
   }
+}
+
+// A set of field predicates.
+//
+// Note that there may be more than one predicate for the same field, in which case they all apply
+// (as if they were ANDed). If the predicates associated to a given field are mutually incompatible
+// then no field set will ever match this field predicate set.
+message FieldPredicates {
+  repeated FieldPredicate field_predicate = 1;
 }
 
 message FetchNode {
   // The stream table to fetch.
   optional StreamTable stream_table = 1;
 
-  // The keys in this map are field names and the values are the corresponding
-  // predicates. Both target fields and metric fields are allowed, with metric
-  // field names being prefixed by `metric:`.
-  map<string, FieldPredicate> field_predicates = 2;
+  // Both target fields and metric fields may be specified in these predicates. Metric field names
+  // must be prefixed with `metric:`.
+  optional FieldPredicates field_predicates = 2;
 }
 
 // A node made up of two or more sub-nodes.
@@ -564,9 +615,12 @@ message Node {
     PointNode point_node = 5;
     TimeShiftNode time_shift_node = 6;
     JoinNode join_node = 7;
-    PickTopStreamsNode pick_top_streams_node = 8;
-    PickTopPointsNode pick_top_points_node = 9;
-    // TODO
+    JoinWithLiteralTableNode join_with_literal_table_node = 8;
+    PickTopStreamsNode pick_top_streams_node = 9;
+    PickTopPointsNode pick_top_points_node = 10;
+    MapStreamIdNode map_stream_id_node = 11;
+    UnionNode union_node = 12;
+    FilterNode filter_node = 13;
   }
 }
 
